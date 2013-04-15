@@ -184,6 +184,13 @@ int main(int argc, char* argv[])
 				{
 					sprite.rotate(-1.0f);
 				}
+				if(event.key.code == sf::Keyboard::S)
+				{
+					pWeb->SetSize(640, 360);
+					sprite.setTexture(*pWeb->GetTexture(), true);
+					sprite.setOrigin(sprite.getTexture()->getSize().x / 2.0f, sprite.getTexture()->getSize().y / 2.0f);
+					sprite.setPosition(640, 360);
+				}
 				
 				//Make sure we give focus to the browser since we are about to send it input.  
 				//Since focus is never taken away in this example, this only actually needs to be done once.  

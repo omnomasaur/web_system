@@ -199,12 +199,6 @@ void WebSystem::OnPaint(CefRefPtr<CefBrowser> browser, PaintElementType type, co
 
 	if(type == PET_VIEW)
 	{
-		int old_width = pWeb->mTextureWidth;
-		int old_height = pWeb->mTextureHeight;
-
-		//Retrieve current size of browser view.
-		browser->GetSize(type, pWeb->mTextureWidth, pWeb->mTextureHeight);
-
 		//Convert BGRA to RGBA
 		unsigned int* pTmpBuf = (unsigned int*)buffer;
 		const int numPixels = pWeb->mTextureHeight * pWeb->mTextureWidth;
@@ -213,67 +207,37 @@ void WebSystem::OnPaint(CefRefPtr<CefBrowser> browser, PaintElementType type, co
 			pTmpBuf[i] = (pTmpBuf[i] & 0xFF00FF00) | ((pTmpBuf[i] & 0x00FF0000) >> 16) | ((pTmpBuf[i] & 0x000000FF) << 16);
 		}
 
-		//Check if we need to resize the texture before drawing to it.
-		if(old_width != pWeb->mTextureWidth || old_height != pWeb->mTextureHeight)
+		//We want to work on the buffer byte by byte so get a pointer with a new type.
+		char* bitmap = (char*)(buffer);
+
+		//Update the dirty rectangles.
+		CefRenderHandler::RectList::const_iterator i = dirtyRects.begin();
+		for(; i != dirtyRects.end(); ++i)
 		{
-			printf("Called resize code in onpaint.\n");
-			//Update/resize the whole texture.
-			//sf::Texture* pOldTexture = pWeb->mpTexture;
-			//pWeb->mpTexture = new sf::Texture();
-			//pWeb->mpTexture->create(pWeb->mTextureWidth, pWeb->mTextureHeight);
-			//pWeb->mpTexture->setSmooth(true);
+			const CefRect& rect = *i;
+			//Create a rect sized buffer for the new rectangle data.
+			char* rectBuffer = new char[rect.width * rect.height * BYTES_PER_PIXEL];
 
-			//char* pPrevBuffer = pWeb->mpBuffer;
-			//pWeb->mpBuffer = new char[pWeb->mTextureWidth * (pWeb->mTextureHeight + 1) * BYTES_PER_PIXEL];
-			//delete pPrevBuffer;
-			//
-			//unsigned char* bitmap = (unsigned char*)(buffer);
-			////Update the whole rectangle
-			//for(int jj = 0; jj < pWeb->mTextureHeight; jj++)
-			//{
-			//	memcpy(
-			//		pWeb->mpBuffer + jj * pWeb->mTextureWidth * BYTES_PER_PIXEL,
-			//		bitmap + (0 + (jj + 0) * pWeb->mTextureWidth) * BYTES_PER_PIXEL,
-			//		pWeb->mTextureWidth * BYTES_PER_PIXEL
-			//		);
-			//}
-
-			//pWeb->mpTexture->update((sf::Uint8*)pWeb->mpBuffer, pWeb->mTextureWidth, pWeb->mTextureHeight, 0, 0);
-		}
-		else
-		{
-			//We want to work on the buffer byte by byte so get a pointer with a new type.
-			char* bitmap = (char*)(buffer);
-
-			//Update the dirty rectangles.
-			CefRenderHandler::RectList::const_iterator i = dirtyRects.begin();
-			for(; i != dirtyRects.end(); ++i)
+			for(int jj = 0; jj < rect.height; jj++)
 			{
-				const CefRect& rect = *i;
-				//Create a rect sized buffer for the new rectangle data.
-				char* rectBuffer = new char[rect.width * rect.height * BYTES_PER_PIXEL];
-
-				for(int jj = 0; jj < rect.height; jj++)
-				{
-					//Copy the new rectangle data out of the full size buffer into our rect sized one.  
-					memcpy(
-						rectBuffer + jj * rect.width * BYTES_PER_PIXEL,
-						bitmap + ( (rect.x + ( (rect.y + jj) * pWeb->mTextureWidth) ) * BYTES_PER_PIXEL ),
-						rect.width * BYTES_PER_PIXEL
-						);
-				}
-
-				//Update the texture with the new data.  
-				//This can be interrupted if the main thread calls a draw on a sprite which uses this texture
-				// as the texture is bound by openGL calls.  
-				//To rectify this we have the redundancy updating system.  
-				pWeb->mpTexture->update((sf::Uint8*)rectBuffer, rect.width, rect.height, rect.x, rect.y);
-
-				//Here we need to add the data required for the update to the queue for redundancy updates.  
-				pWeb->mUpdateRects.push(WebInterface::UpdateRect());
-				pWeb->mUpdateRects.back().buffer = rectBuffer;
-				pWeb->mUpdateRects.back().rect = rect;
+				//Copy the new rectangle data out of the full size buffer into our rect sized one.  
+				memcpy(
+					rectBuffer + jj * rect.width * BYTES_PER_PIXEL,
+					bitmap + ( (rect.x + ( (rect.y + jj) * pWeb->mTextureWidth) ) * BYTES_PER_PIXEL ),
+					rect.width * BYTES_PER_PIXEL
+					);
 			}
+
+			//Update the texture with the new data.  
+			//This can be interrupted if the main thread calls a draw on a sprite which uses this texture
+			// as the texture is bound by openGL calls.  
+			//To rectify this we have the redundancy updating system.  
+			pWeb->mpTexture->update((sf::Uint8*)rectBuffer, rect.width, rect.height, rect.x, rect.y);
+
+			//Here we need to add the data required for the update to the queue for redundancy updates.  
+			pWeb->mUpdateRects.push(WebInterface::UpdateRect());
+			pWeb->mUpdateRects.back().buffer = rectBuffer;
+			pWeb->mUpdateRects.back().rect = rect;
 		}
 	}
 }
