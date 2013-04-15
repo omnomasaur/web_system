@@ -1,0 +1,23 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<link rel="stylesheet" type="text/css" href="./css/test_menu.css" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Test Menu</title>
+</head>
+
+<body>
+	<div id="bot_left_button">
+		<script type="text/javascript">
+		function testFunc()
+		{
+			var text = document.getElementById('input_textbox').value;
+			testCallback( text );
+		}
+		</script>
+		<button type="button" onclick="testFunc()">test</button>
+		
+		<input type="text" id="input_textbox" value="test">
+	</div>
+</body>
+</html>
