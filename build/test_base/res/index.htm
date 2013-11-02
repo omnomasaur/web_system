@@ -7,17 +7,86 @@
 </head>
 
 <body>
-	<div id="bot_left_button">
+	<div id="main">
+		
 		<script type="text/javascript">
 		function testFunc()
 		{
 			var text = document.getElementById('input_textbox').value;
 			testCallback( text );
 		}
-		</script>
-		<button type="button" onclick="testFunc()">test</button>
 		
-		<input type="text" id="input_textbox" value="test">
+		function updateTime()
+		{
+			updateTimeCallback();
+		}
+		
+		function doClick()
+		{
+			clickCallback
+			(
+				parseInt(document.getElementById('in_hour').value),
+				parseInt(document.getElementById('in_minute').value),
+				parseInt(document.getElementById('in_second').value)
+			);
+		}
+		
+		function hP1()
+		{
+			var h = parseInt(document.getElementById('in_hour').value);
+			h += 1;
+			if(h >= 24)
+			{
+				h = 0;
+			}
+			document.getElementById('in_hour').value = h;
+		}
+		function mP1()
+		{
+			var m = parseInt(document.getElementById('in_minute').value);
+			m += 1;
+			if(m >= 60)
+			{
+				hP1();
+				m = 0;
+			}
+			document.getElementById('in_minute').value = m;
+		}
+		function sP1()
+		{
+			var s = parseInt(document.getElementById('in_second').value);
+			s += 1;
+			if(s >= 60)
+			{
+				mP1();
+				s = 0;
+			}
+			document.getElementById('in_second').value = s;
+		}
+		</script>
+		
+		<div id="time">TIME
+		</div>
+		
+		<div id="labels">
+		<div id="label-h">H</div>
+		<div id="label-m">M</div>
+		<div id="label-s">S</div>
+		</div>
+		<div id="inputs">
+		<div id="in-h"> <input type="text" size="2" id="in_hour" value=0> </div>
+		<div id="in-m"> <input type="text" size="2" id="in_minute" value=0> </div>
+		<div id="in-s"> <input type="text" size="2" id="in_second" value=0> </div>
+		</div>
+		<div id="buttons">
+		<div id="b-h"> <button type="button" onclick="hP1()">+1</button> </div>
+		<div id="b-m"> <button type="button" onclick="mP1()">+1</button> </div>
+		<div id="b-s"> <button type="button" onclick="sP1()">+1</button> </div>
+		</div>
+		<div id="gobuttons">
+		<div id="b-update"> <button type="button" onclick="updateTime()">Update</button> </div>
+		<div id="b-click"> <button type="button" onclick="doClick()">Click</button> </div>
+		</div>
 	</div>
 </body>
 </html>

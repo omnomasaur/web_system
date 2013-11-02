@@ -1,15 +1,119 @@
 @charset "utf-8";
 /* CSS Document */
 
-#bot_left_button
+#main
 {
+	/*
 	opacity:0.4;
-	background-color:#00aaff;
-	border-style:solid;
-	border-width:3px;
-	padding:0px;
-	width:200px;
-	height:200px;
 	margin-left:auto;
 	margin-right:auto;
+	padding:0px;
+	border-style:solid;
+	border-width:3px;
+	*/
+	background-color:#00aaff;
+	position: absolute;
+	top:0;
+	left:0;
+	width:240px;
+	height:320px;
+}
+
+#time
+{
+	-moz-user-select: none; 
+	-khtml-user-select: none; 
+	-webkit-user-select: none; 
+	-o-user-select: none; 
+	text-align:center;
+	font-size:200%;
+	border-style:solid;
+	border-width:3px;
+}
+
+#labels
+{
+}
+#label-h
+{
+	display:inline;
+	position:absolute;
+	left:20px;
+}
+#label-m
+{
+	display:inline;
+	position:absolute;
+	left:117px;
+}
+#label-s
+{
+	display:inline;
+	position:absolute;
+	left:210px;
+}
+
+#inputs
+{
+	display:inline;
+	position:absolute;
+	top:62px;
+}
+#in-h
+{
+	display:inline;
+	position:absolute;
+	left:0px;
+}
+#in-m
+{
+	display:inline;
+	position:absolute;
+	left:100px;
+}
+#in-s
+{
+	display:inline;
+	position:absolute;
+	left:190px;
+}
+
+#buttons
+{
+	display:inline;
+	position:absolute;
+	top:90px;
+}
+#b-h
+{
+	display:inline;
+	position:absolute;
+	left:0px;
+}
+#b-m
+{
+	display:inline;
+	position:absolute;
+	left:100px;
+}
+#b-s
+{
+	display:inline;
+	position:absolute;
+	left:190px;
+}
+
+#gobuttons
+{
+	display:inline;
+	position:absolute;
+	top:120px;
+}
+#b-update
+{
+	display:inline;
+}
+#b-click
+{
+	display:inline;
 }

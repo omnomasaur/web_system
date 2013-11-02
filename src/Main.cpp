@@ -1,12 +1,20 @@
 //Entry point file.
 
 #include <string>
+#include <sstream>
 #include <algorithm>
 
 #include <SFML\Graphics.hpp>
 #include <SFML\System.hpp>
 
 #include "WebSystem.h"
+
+#include "InputSimulation.h"
+
+#include "WebTime.h"
+
+#define SIZE_X 240
+#define SIZE_Y 320
 
 // This annoyingly long function converts sf::Keyboard::Keys that are
 //  not characters into WPARAM key codes, which are what CEF takes. 
@@ -104,6 +112,45 @@ char* getCmdOption(char** begin, char** end, const std::string & option)
     return NULL;
 }
 
+//LOL GLOBALS ARE LEGIT YO
+std::string baseTime;
+sf::Clock elapsedTime;
+sf::Time waitTime = sf::Time::Zero;
+sf::Clock waitClock;
+bool cancel = false;
+//Make the window to render things in.
+sf::RenderWindow window;
+
+void waitThreadFunc()
+{
+	while(!cancel)
+	{
+		if(waitClock.getElapsedTime() >= waitTime)
+			break;
+
+		Sleep(10);
+	}
+
+	if(cancel)
+	{
+		cancel = false;
+		return;
+	}
+
+	//INPUT SIMULATION HERE
+	int clickx, clicky;
+	clickx = (int)(::GetSystemMetrics( SM_CXSCREEN )-1) / 2; 
+	clicky = (int)(::GetSystemMetrics( SM_CYSCREEN )-1) / 2; 
+	MouseMove(clickx, clicky);
+	LeftClick();
+
+	window.close();
+}
+
+sf::Thread waitThread(waitThreadFunc);
+//WebInterfaces are used to interact with the web system.  
+WebInterface* pWeb;
+
 // This is the javascript callback function that gets bound to "testCallback"
 // Each JS binding gets it's own callback function which must return a bool
 //  and take these parameters.  
@@ -119,14 +166,83 @@ bool jsCallback (
 	return true;
 }
 
+bool jsUpdateTime (
+		CefRefPtr<CefV8Value> object,
+		const CefV8ValueList& arguments,
+		CefRefPtr<CefV8Value>& retval,
+		CefString& exception
+						  )
+{
+	printf("Updating time.\n");
+	baseTime = WebTime::GetFormattedTime();
+	elapsedTime.restart();
+	
+	int hour, minute, second, elapsedSeconds;
+	sscanf_s(baseTime.c_str(), "%d %d %d", &hour, &minute, &second);
+
+	elapsedSeconds = (int)elapsedTime.getElapsedTime().asSeconds();
+
+	hour = (((hour * 60 * 60) + (minute * 60) + second + elapsedSeconds) / 60 / 60) % 24;
+	minute = (((minute * 60) + second + elapsedSeconds) / 60) % 60;
+	second = (second + elapsedSeconds) % 60;
+	
+	std::stringstream js;
+	js << "document.getElementById(\"in_hour\").value = " << hour << ";\n";
+	js << "document.getElementById(\"in_minute\").value = " << minute << ";\n";
+	js << "document.getElementById(\"in_second\").value = " << second << ";\n";
+
+	pWeb->ExecuteJS(js.str().c_str());
+
+	return true;
+}
+
+bool jsClick (
+		CefRefPtr<CefV8Value> object,
+		const CefV8ValueList& arguments,
+		CefRefPtr<CefV8Value>& retval,
+		CefString& exception
+						  )
+{
+	printf("Going to click.\n");
+	baseTime = WebTime::GetFormattedTime();
+
+	int chour, cminute, csecond, whour, wminute, wsecond;
+	sscanf_s(baseTime.c_str(), "%d %d %d", &chour, &cminute, &csecond);
+
+	int hour = arguments[0]->GetIntValue();
+	int minute = arguments[1]->GetIntValue();
+	int second = arguments[2]->GetIntValue();
+
+	whour = hour - chour;
+	wminute = minute - cminute;
+	wsecond = second - csecond;
+
+	sf::Int64 microseconds = (whour * 60 * 60 * 1000000) + (wminute * 60 * 1000000) + (wsecond * 1000000);
+
+	waitTime = sf::microseconds(microseconds);
+
+	printf("%f\n", waitTime.asSeconds());
+
+	waitClock.restart();
+	waitThread.launch();
+
+	return true;
+}
+
+bool jsCancel (
+		CefRefPtr<CefV8Value> object,
+		const CefV8ValueList& arguments,
+		CefRefPtr<CefV8Value>& retval,
+		CefString& exception
+						  )
+{
+	cancel = true;
+	return true;
+}
+
 int main(int argc, char* argv[])
 {
-	//Make the window to render things in.
-	sf::RenderWindow window;
-	window.create(sf::VideoMode(1280, 720), "test_base");
-
-	//WebInterfaces are used to interact with the web system.  
-	WebInterface* pWeb;
+	window.create(sf::VideoMode(SIZE_X, SIZE_Y), "test_base");
 
 	//This starts the thread that runs CEF.
 	//Said thread is a part of the WebSystem and not CEF's own multi threading.  
@@ -142,14 +258,16 @@ int main(int argc, char* argv[])
 
 	//Create our web interface and retrieve a pointer to it.  
 	//Parameters are (width, height, staring URL, transparent background)
-	pWeb = WebSystem::CreateWebInterfaceSync(1280, 720, 
-		//"local://../res/index.htm"   "http://www.google.com"
-		"http://www.google.com"
+	pWeb = WebSystem::CreateWebInterfaceSync(SIZE_X, SIZE_Y, 
+		"local://../res/index.htm"
+		//"http://www.google.com"
 		, true);
 	
 	//Add the binding for "testCallback" to our web interface.  
 	//Specifies jsCallback as the function to be called for the binding.  
-	pWeb->AddJSBinding("testCallback", &jsCallback);
+	//pWeb->AddJSBinding("testCallback", &jsCallback);
+	pWeb->AddJSBinding("clickCallback", &jsClick);
+	pWeb->AddJSBinding("updateTimeCallback", &jsUpdateTime);
 
 	//Set up the sprite which will be drawing our web texture.  
 	sf::Sprite sprite;
@@ -157,7 +275,26 @@ int main(int argc, char* argv[])
 	//Get the texture from pWeb to draw in texture.  This only need be done once.  
 	sprite.setTexture(*pWeb->GetTexture());
 	sprite.setOrigin(sprite.getTexture()->getSize().x / 2.0f, sprite.getTexture()->getSize().y / 2.0f);
-	sprite.setPosition(640, 360);
+	sprite.setPosition(SIZE_X / 2.0f, SIZE_Y / 2.0f);
+
+	baseTime = WebTime::GetFormattedTime();
+	elapsedTime.restart();
+	
+	int hour, minute, second, elapsedSeconds;
+	sscanf_s(baseTime.c_str(), "%d %d %d", &hour, &minute, &second);
+
+	elapsedSeconds = (int)elapsedTime.getElapsedTime().asSeconds();
+
+	hour = (((hour * 60 * 60) + (minute * 60) + second + elapsedSeconds) / 60 / 60) % 24;
+	minute = (((minute * 60) + second + elapsedSeconds) / 60) % 60;
+	second = (second + elapsedSeconds) % 60;
+	
+	std::stringstream js;
+	js << "document.getElementById(\"in_hour\").value = " << hour << ";\n";
+	js << "document.getElementById(\"in_minute\").value = " << minute << ";\n";
+	js << "document.getElementById(\"in_second\").value = " << second << ";\n";
+
+	pWeb->ExecuteJS(js.str().c_str());
 
 	//This is acutally the example loop from SFML's tutorials.  
     // run the program as long as the window is open
@@ -277,6 +414,27 @@ int main(int argc, char* argv[])
         }
 
 		//UPDATE ZONE
+		//Update our time.  
+		//if(elapsedTime.getElapsedTime().asSeconds() > 5.0)
+		{
+			int hour, minute, second, elapsedSeconds;
+			sscanf_s(baseTime.c_str(), "%d %d %d", &hour, &minute, &second);
+
+			elapsedSeconds = (int)elapsedTime.getElapsedTime().asSeconds();
+
+			hour = (((hour * 60 * 60) + (minute * 60) + second + elapsedSeconds) / 60 / 60) % 24;
+			minute = (((minute * 60) + second + elapsedSeconds) / 60) % 60;
+			second = (second + elapsedSeconds) % 60;
+
+			//Update the drawn time
+			std::stringstream js;
+			js << "document.getElementById(\"time\").innerHTML = \"";
+			js << hour << ":" << minute << ":" << second;
+			js << "\";";
+
+			pWeb->ExecuteJS(js.str().c_str());
+		}
+
 		//This is actually redundantly updates the texture.
 		//The first draw is done when CEF calls onPaint, but that can be interrupted
 		// by the sprite being drawn (which changes the texture binding in openGL).
