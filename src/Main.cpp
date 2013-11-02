@@ -118,6 +118,7 @@ sf::Clock elapsedTime;
 sf::Time waitTime = sf::Time::Zero;
 sf::Clock waitClock;
 bool cancel = false;
+bool closeWindow = false;
 //Make the window to render things in.
 sf::RenderWindow window;
 
@@ -143,8 +144,8 @@ void waitThreadFunc()
 	clicky = (int)(::GetSystemMetrics( SM_CYSCREEN )-1) / 2; 
 	MouseMove(clickx, clicky);
 	LeftClick();
-
-	window.close();
+	
+	closeWindow = true;
 }
 
 sf::Thread waitThread(waitThreadFunc);
@@ -205,6 +206,7 @@ bool jsClick (
 {
 	printf("Going to click.\n");
 	baseTime = WebTime::GetFormattedTime();
+	elapsedTime.restart();
 
 	int chour, cminute, csecond, whour, wminute, wsecond;
 	sscanf_s(baseTime.c_str(), "%d %d %d", &chour, &cminute, &csecond);
@@ -268,6 +270,7 @@ int main(int argc, char* argv[])
 	//pWeb->AddJSBinding("testCallback", &jsCallback);
 	pWeb->AddJSBinding("clickCallback", &jsClick);
 	pWeb->AddJSBinding("updateTimeCallback", &jsUpdateTime);
+	pWeb->AddJSBinding("cancelCallback", &jsCancel);
 
 	//Set up the sprite which will be drawing our web texture.  
 	sf::Sprite sprite;
@@ -300,6 +303,12 @@ int main(int argc, char* argv[])
     // run the program as long as the window is open
     while (window.isOpen())
     {
+
+		if(closeWindow)
+		{
+			window.close();
+			break;
+		}
         // check all the window's events that were triggered since the last iteration of the loop
         sf::Event event;
         while (window.pollEvent(event))
@@ -451,6 +460,10 @@ int main(int argc, char* argv[])
 
 		window.display();
     }
+
+	cancel = true;
+
+	waitThread.terminate();
 
 	//Release pWeb so that CEF can shutdown properly.  
 	pWeb->Release();

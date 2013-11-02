@@ -21,14 +21,27 @@
 			updateTimeCallback();
 		}
 		
+		var isWaiting = false;
+		
 		function doClick()
 		{
-			clickCallback
-			(
-				parseInt(document.getElementById('in_hour').value),
-				parseInt(document.getElementById('in_minute').value),
-				parseInt(document.getElementById('in_second').value)
-			);
+			if(!isWaiting)
+			{
+				clickCallback
+				(
+					parseInt(document.getElementById('in_hour').value),
+					parseInt(document.getElementById('in_minute').value),
+					parseInt(document.getElementById('in_second').value)
+				);
+				isWaiting = true;
+				document.getElementById('click_button').innerHTML = "Cancel";
+			}
+			else
+			{
+				cancelCallback();
+				isWaiting = false;
+				document.getElementById('click_button').innerHTML = "Click";
+			}
 		}
 		
 		function hP1()
@@ -85,7 +98,7 @@
 		</div>
 		<div id="gobuttons">
 		<div id="b-update"> <button type="button" onclick="updateTime()">Update</button> </div>
-		<div id="b-click"> <button type="button" onclick="doClick()">Click</button> </div>
+		<div id="b-click"> <button type="button" id="click_button" onclick="doClick()">Click</button> </div>
 		</div>
 	</div>
 </body>
