@@ -11,7 +11,7 @@
 	border-style:solid;
 	border-width:3px;
 	*/
-	background-color:#555555;
+	background-color:#000000;
 	position: absolute;
 	top:0;
 	left:0;
@@ -21,93 +21,41 @@
 
 #time
 {
-	-moz-user-select: none; 
-	-khtml-user-select: none; 
-	-webkit-user-select: none; 
-	-o-user-select: none; 
+	-moz-user-select: none;
+	-khtml-user-select: none;
+	-webkit-user-select: none;
+	-o-user-select: none;
 	text-align:center;
 	font-size:200%;
 	border-style:solid;
 	border-width:3px;
+	color: #FFF;
 }
 
-#labels
+#indicator
 {
-}
-#label-h
-{
-	display:inline;
-	position:absolute;
-	left:20px;
-}
-#label-m
-{
-	display:inline;
-	position:absolute;
-	left:117px;
-}
-#label-s
-{
-	display:inline;
-	position:absolute;
-	left:210px;
+	font-weight:500;
+	color:#FFF;
 }
 
-#inputs
+#table
 {
-	display:inline;
-	position:absolute;
-	top:62px;
-}
-#in-h
-{
-	display:inline;
-	position:absolute;
-	left:0px;
-}
-#in-m
-{
-	display:inline;
-	position:absolute;
-	left:100px;
-}
-#in-s
-{
-	display:inline;
-	position:absolute;
-	left:190px;
-}
-
-#buttons
-{
-	display:inline;
-	position:absolute;
-	top:90px;
-}
-#b-h
-{
-	display:inline;
-	position:absolute;
-	left:0px;
-}
-#b-m
-{
-	display:inline;
-	position:absolute;
-	left:100px;
-}
-#b-s
-{
-	display:inline;
-	position:absolute;
-	left:190px;
+	-moz-user-select: none;
+	-khtml-user-select: none;
+	-webkit-user-select: none;
+	-o-user-select: none;
 }
 
 #gobuttons
 {
+	-moz-user-select: none;
+	-khtml-user-select: none;
+	-webkit-user-select: none;
+	-o-user-select: none;
 	display:inline;
 	position:absolute;
-	top:120px;
+	top:150px;
+	left: 0px;
 }
 #b-update
 {

@@ -81,21 +81,31 @@
 		<div id="time">TIME
 		</div>
 		
-		<div id="labels">
-		<div id="label-h">H</div>
-		<div id="label-m">M</div>
-		<div id="label-s">S</div>
-		</div>
-		<div id="inputs">
-		<div id="in-h"> <input type="text" size="2" id="in_hour" value=0> </div>
-		<div id="in-m"> <input type="text" size="2" id="in_minute" value=0> </div>
-		<div id="in-s"> <input type="text" size="2" id="in_second" value=0> </div>
-		</div>
-		<div id="buttons">
-		<div id="b-h"> <button type="button" onclick="hP1()">+1</button> </div>
-		<div id="b-m"> <button type="button" onclick="mP1()">+1</button> </div>
-		<div id="b-s"> <button type="button" onclick="sP1()">+1</button> </div>
-		</div>
+        <div id="table">
+	  <table width="240" border="0">
+		  <tr>
+		    <td width="75" height="18"><div align="center" id="indicator">H</div></td>
+		    <td width="76"><div align="center" id="indicator">M</div></td>
+		    <td width="75"><div align="center" id="indicator">S</div></td>
+        </tr>
+		  <tr>
+		    <td height="24"><div align="center">
+	          <input type="text" size="2" id="in_hour" value=0>
+            &nbsp;</div></td>
+		    <td><div align="center">
+	          <input type="text" size="2" id="in_minute" value=0>
+            &nbsp;</div></td>
+		    <td><div align="center">
+	          <input type="text" size="2" id="in_second" value=0>
+            &nbsp;</div></td>
+	      </tr>
+		  <tr>
+		    <td height="40"><div align="center"><button type="button" onclick="hP1()">+1</button></div>&nbsp;</td>
+		    <td><div align="center"><button type="button" onclick="mP1()">+1</button></div>&nbsp;</td>
+		    <td><div align="center"><button type="button" onclick="sP1()">+1</button></div>&nbsp;</td>
+	      </tr>
+	  </table>
+      </div>
 		<div id="gobuttons">
 		<div id="b-update"> <button type="button" onclick="updateTime()">Update</button> </div>
 		<div id="b-click"> <button type="button" id="click_button" onclick="doClick()">Click</button> </div>
