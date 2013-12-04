@@ -569,7 +569,8 @@ WebInterface::WebInterface(int width, int height, const std::string& url, bool t
 , mpTexture(NULL)
 {
 	mpTexture = new sf::Texture();
-	mpTexture->create(mTextureWidth, mTextureHeight);
+	sf::Image img; img.create(mTextureWidth, mTextureHeight, sf::Color(0, 0, 0, 0));
+	mpTexture->loadFromImage(img);
 	mpTexture->setSmooth(true);
 
 }

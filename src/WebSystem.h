@@ -558,7 +558,7 @@ public:
 	/// ready for release, which can cause a memory leak if not tracked carefully.
 	///
 	////////////////////////////////////////////////////////////
-	void Close(bool force = true) { mBrowser->GetHost()->CloseBrowser(force); }
+	void Close(bool force = true) { sf::Lock lock(mMutex); mBrowser->GetHost()->CloseBrowser(force); }
 
 	////////////////////////////////////////////////////////////
 	/// \brief Accesses the browser related this WebInterface
