@@ -158,7 +158,7 @@ int main(int argc, char* argv[])
 	//"res" specifies /res as the domain.  
 	WebSystem::RegisterScheme("local", "res", new LocalSchemeHandlerFactory());
 
-	int cols = 3;
+	int cols = 1;
 	int rows = 1;
 	for (int i = 0; i < cols * rows; i++)
 	{
@@ -171,9 +171,9 @@ int main(int argc, char* argv[])
 		pWeb = WebSystem::CreateWebInterfaceSync(
 			(int)(window.getSize().x / (float)cols)
 			, (int)(window.getSize().y / (float)rows)
-			,"local://../res/index.htm"
+			//,"local://../res/index.htm"
 			//,"http://www.randomwebsite.com/cgi-bin/random.pl"
-			//, "http://www.google.com"
+			, "http://www.google.com"
 			, true);
 
 		//Add the binding for "testCallback" to our web interface.  
@@ -295,28 +295,28 @@ int main(int argc, char* argv[])
 							sprites.clear();
 						}
 					}
-					if (!webInterfaces.size()) continue;
-					if (event.key.code == sf::Keyboard::A)
-					{
-						webInterfaces.front()->ExecuteJS("document.getElementById(\"input_textbox\").value = \"c++_put_this_here\";\n");
-					}
-					//These are just for the rotation to demonstrate the web being drawn to a sprite.  
-					if (event.key.code == sf::Keyboard::Q)
-					{
-						sprites.front().rotate(1.0f);
-					}
-					if (event.key.code == sf::Keyboard::E)
-					{
-						sprites.front().rotate(-1.0f);
-					}
-					if (event.key.code == sf::Keyboard::S)
-					{
-						if (!webInterfaces.size()) continue;
-						webInterfaces.front()->SetSize(640, 360);
-						sprites.front().setTexture(*webInterfaces.front()->GetTexture(), true);
-						sprites.front().setOrigin(sprites.front().getTexture()->getSize().x / 2.0f, sprites.front().getTexture()->getSize().y / 2.0f);
-						sprites.front().setPosition(640, 360);
-					}
+					//if (!webInterfaces.size()) continue;
+					//if (event.key.code == sf::Keyboard::A)
+					//{
+					//	webInterfaces.front()->ExecuteJS("document.getElementById(\"input_textbox\").value = \"c++_put_this_here\";\n");
+					//}
+					////These are just for the rotation to demonstrate the web being drawn to a sprite.  
+					//if (event.key.code == sf::Keyboard::Q)
+					//{
+					//	sprites.front().rotate(1.0f);
+					//}
+					//if (event.key.code == sf::Keyboard::E)
+					//{
+					//	sprites.front().rotate(-1.0f);
+					//}
+					//if (event.key.code == sf::Keyboard::S)
+					//{
+					//	if (!webInterfaces.size()) continue;
+					//	webInterfaces.front()->SetSize(640, 360);
+					//	sprites.front().setTexture(*webInterfaces.front()->GetTexture(), true);
+					//	sprites.front().setOrigin(sprites.front().getTexture()->getSize().x / 2.0f, sprites.front().getTexture()->getSize().y / 2.0f);
+					//	sprites.front().setPosition(640, 360);
+					//}
 
 					if (!webInterfaces.size())continue;
 
