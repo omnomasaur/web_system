@@ -1,4 +1,4 @@
 web_system
 ==========
 
-An implementation of offscreen rendering using CEF1 in SFML 2.0.  
+An implementation of offscreen rendering using CEF3 in SFML 2.  
