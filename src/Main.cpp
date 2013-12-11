@@ -76,6 +76,42 @@ WPARAM sfkeyToWparam(sf::Keyboard::Key key)
 	case sf::Keyboard::Numpad7:		return 	VK_NUMPAD7;
 	case sf::Keyboard::Numpad8:		return 	VK_NUMPAD8;
 	case sf::Keyboard::Numpad9:		return 	VK_NUMPAD9;
+	case sf::Keyboard::A:						return	'A';
+	case sf::Keyboard::B:						return	'B';
+	case sf::Keyboard::C:						return	'C';
+	case sf::Keyboard::D:						return	'D';
+	case sf::Keyboard::E:						return	'E';
+	case sf::Keyboard::F:						return	'F';
+	case sf::Keyboard::G:						return	'G';
+	case sf::Keyboard::H:						return	'H';
+	case sf::Keyboard::I:						return	'I';
+	case sf::Keyboard::J:						return	'J';
+	case sf::Keyboard::K:						return	'K';
+	case sf::Keyboard::L:						return	'L';
+	case sf::Keyboard::M:						return	'M';
+	case sf::Keyboard::N:						return	'N';
+	case sf::Keyboard::O:						return	'O';
+	case sf::Keyboard::P:						return	'P';
+	case sf::Keyboard::Q:						return	'Q';
+	case sf::Keyboard::R:						return	'R';
+	case sf::Keyboard::S:						return	'S';
+	case sf::Keyboard::T:						return	'T';
+	case sf::Keyboard::U:						return	'U';
+	case sf::Keyboard::V:						return	'V';
+	case sf::Keyboard::W:						return	'W';
+	case sf::Keyboard::X:						return	'X';
+	case sf::Keyboard::Y:						return	'Y';
+	case sf::Keyboard::Z:						return	'Z';
+	case sf::Keyboard::Num0:					return	'0';
+	case sf::Keyboard::Num1:					return	'1';
+	case sf::Keyboard::Num2:					return	'2';
+	case sf::Keyboard::Num3:					return	'3';
+	case sf::Keyboard::Num4:					return	'4';
+	case sf::Keyboard::Num5:					return	'5';
+	case sf::Keyboard::Num6:					return	'6';
+	case sf::Keyboard::Num7:					return	'7';
+	case sf::Keyboard::Num8:					return	'8';
+	case sf::Keyboard::Num9:					return	'9';
 	}
 
 	return VK_NONAME;
@@ -174,7 +210,8 @@ int main(int argc, char* argv[])
 			//,"local://../res/index.htm"
 			//,"http://www.randomwebsite.com/cgi-bin/random.pl"
 			, "http://www.google.com"
-			, true);
+			, true
+			, window.getSystemHandle());
 
 		//Add the binding for "testCallback" to our web interface.  
 		//Specifies jsCallback as the function to be called for the binding.  
@@ -216,46 +253,46 @@ int main(int argc, char* argv[])
 				window.close();
 
 			//if (!webInterfaces.size()) continue;
-				if (event.type == sf::Event::MouseButtonPressed)
+			if (event.type == sf::Event::MouseButtonPressed)
+			{
+
+				if (clickClock.getElapsedTime().asSeconds() < clickTime && event.mouseButton.button == lastClickType)
+					clickCount++;
+				else
+					clickCount = 1;
+
+				lastClickType = event.mouseButton.button;
+
+				for (unsigned int i = 0; i < webInterfaces.size(); i++)
 				{
+					if (webInterfaces.size())
+						webInterfaces[i]->SendFocusEvent(true);
+					//Send the mouse down events.  
+					//These two lines transform the global mouse position into coordinates of the sprite
+					// which the web is being drawn to.  
+					sf::Vector2f point = (sf::Vector2f)sf::Mouse::getPosition(window);
+					point = sprites[i].getInverseTransform().transformPoint(point);
+					//printf("Point: (%d, %d)\n", (int)point.x, (int)point.y);
+					//CefBrowserHost::MouseButtonType type = event.mouseButton.button == sf::Mouse::Left ? MBT_LEFT : MBT_RIGHT;
 
-					if (clickClock.getElapsedTime().asSeconds() < clickTime && event.mouseButton.button == lastClickType)
-						clickCount++;
-					else
-						clickCount = 1;
+					webInterfaces[i]->SendMouseClickEvent((int)point.x, (int)point.y, event.mouseButton.button, false, clickCount);
 
-					lastClickType = event.mouseButton.button;
-
-					for (unsigned int i = 0; i < webInterfaces.size(); i++)
-					{
-						if (webInterfaces.size())
-							webInterfaces[i]->SendFocusEvent(true);
-						//Send the mouse down events.  
-						//These two lines transform the global mouse position into coordinates of the sprite
-						// which the web is being drawn to.  
-						sf::Vector2f point = (sf::Vector2f)sf::Mouse::getPosition(window);
-						point = sprites[i].getInverseTransform().transformPoint(point);
-						//printf("Point: (%d, %d)\n", (int)point.x, (int)point.y);
-						//CefBrowserHost::MouseButtonType type = event.mouseButton.button == sf::Mouse::Left ? MBT_LEFT : MBT_RIGHT;
-
-						webInterfaces[i]->SendMouseClickEvent((int)point.x, (int)point.y, event.mouseButton.button, false, clickCount);
-
-						clickClock.restart();
-					}
+					clickClock.restart();
 				}
-				if (event.type == sf::Event::MouseButtonReleased)
+			}
+			if (event.type == sf::Event::MouseButtonReleased)
+			{
+				for (unsigned int i = 0; i < webInterfaces.size(); i++)
 				{
-					for (unsigned int i = 0; i < webInterfaces.size(); i++)
-					{
-						if (webInterfaces.size())
-							webInterfaces[i]->SendFocusEvent(true);
-						//Send the mouse release events.
-						sf::Vector2f point = (sf::Vector2f)sf::Mouse::getPosition(window);
-						point = sprites[i].getInverseTransform().transformPoint(point);
-						CefBrowserHost::MouseButtonType type = event.mouseButton.button == sf::Mouse::Left ? MBT_LEFT : MBT_RIGHT;
-						webInterfaces[i]->SendMouseClickEvent((int)point.x, (int)point.y, event.mouseButton.button, true, clickCount);
-					}
+					if (webInterfaces.size())
+						webInterfaces[i]->SendFocusEvent(true);
+					//Send the mouse release events.
+					sf::Vector2f point = (sf::Vector2f)sf::Mouse::getPosition(window);
+					point = sprites[i].getInverseTransform().transformPoint(point);
+					CefBrowserHost::MouseButtonType type = event.mouseButton.button == sf::Mouse::Left ? MBT_LEFT : MBT_RIGHT;
+					webInterfaces[i]->SendMouseClickEvent((int)point.x, (int)point.y, event.mouseButton.button, true, clickCount);
 				}
+			}
 			for (unsigned int i = 0; i < webInterfaces.size(); i++)
 			{
 				if (webInterfaces.size())
@@ -325,33 +362,31 @@ int main(int argc, char* argv[])
 					//webInterfaces[i]->SendFocusEvent(true);
 
 					//Set up and pass the key down to the web interface, which then passes to CEF.
-					cef_key_event_type_t type = KEYEVENT_KEYDOWN;
-					//CefKeyInfo keyInfo;
 					WPARAM key = sfkeyToWparam(event.key.code);
 
 					if (key != VK_NONAME)
-						webInterfaces[i]->SendKeyEvent(type, key);
+					{
+						webInterfaces[i]->SendKeyEvent(key, false, event.key.control);
+					}
 				}
 				if (event.type == sf::Event::KeyReleased)
 				{
 					//Same as passing the key down, but for the key up.  
-					cef_key_event_type_t type = KEYEVENT_KEYUP;
-					//CefKeyInfo keyInfo;
 					WPARAM key = sfkeyToWparam(event.key.code);
-					//keyInfo.key = key;
 
 					if (key != VK_NONAME)
-						webInterfaces[i]->SendKeyEvent(type, key);
+					{
+						webInterfaces[i]->SendKeyEvent(key, true, event.key.control);
+					}
 				}
 				if (event.type == sf::Event::TextEntered)
 				{
 					//This passes the key events for keys which have a character value.  
 					//webInterfaces[i]->SendFocusEvent(true);
-					cef_key_event_type_t type = KEYEVENT_CHAR;
-					//CefKeyInfo keyInfo;
+
 					WPARAM key = (WPARAM)(char)event.text.unicode;
 
-					webInterfaces[i]->SendKeyEvent(type, key);
+					webInterfaces[i]->SendKeyEvent((char)event.text.unicode);
 				}
 			}
 
@@ -364,7 +399,8 @@ int main(int argc, char* argv[])
 						webInterfaces.push_back(WebSystem::CreateWebInterfaceSync(1280, 720,
 							//"local://../res/index.htm"
 							"http://www.google.com"
-							, true));
+							, true
+							, window.getSystemHandle()));
 						webInterfaces.back()->AddJSBinding("testCallback", &jsCallback);
 						//sprites.back().setTexture(*webInterfaces.front()->GetTexture());
 						//sprites.back().setOrigin(sprites.front().getTexture()->getSize().x / 2.0f, sprites.front().getTexture()->getSize().y / 2.0f);

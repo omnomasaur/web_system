@@ -84,7 +84,8 @@ class WebSystem : public CefBrowserProcessHandler,
 	public CefLoadHandler,
 	public CefRequestHandler,
 	public CefDisplayHandler,
-	public CefRenderHandler
+	public CefRenderHandler,
+	public CefKeyboardHandler
 {
 	friend class WebInterface;
 	friend class WebV8Handler;
@@ -169,7 +170,7 @@ public:
 	/// \param transparent	True to use a transparent background
 	///
 	////////////////////////////////////////////////////////////
-	static WebInterface* CreateWebInterfaceSync(int width, int height, const std::string& url, bool transparent);
+	static WebInterface* CreateWebInterfaceSync(int width, int height, const std::string& url, bool transparent, sf::WindowHandle handle);
 
 	////////////////////////////////////////////////////////////
 	/// \brief Redundantly updates the textures of all WebInterfaces
@@ -205,6 +206,7 @@ public:
 	virtual CefRefPtr<CefRequestHandler> GetRequestHandler() override { return this; }
 	virtual CefRefPtr<CefDisplayHandler> GetDisplayHandler() override { return this; }
 	virtual CefRefPtr<CefRenderHandler> GetRenderHandler() override { return this; }
+	virtual CefRefPtr<CefKeyboardHandler> GetKeyboardHandler() override { return this; }
 
 	////////////////////////////////////////////////////////////
 	/// CefLoadHandler methods.
@@ -220,6 +222,12 @@ public:
 	virtual bool GetViewRect(CefRefPtr<CefBrowser> browser, CefRect &rect) override;
 	virtual void OnPaint(CefRefPtr<CefBrowser> browser, PaintElementType type,
 		const RectList& dirtyRects, const void* buffer, int width, int height) override;
+
+	////////////////////////////////////////////////////////////
+	/// CefKeyboardHandler methods.
+	///
+	////////////////////////////////////////////////////////////
+	virtual bool OnKeyEvent(CefRefPtr<CefBrowser> browser, const CefKeyEvent& e, CefEventHandle os_event) override;
 
 	////////////////////////////////////////////////////////////
 	/// CefLifespanHandler methods.
@@ -467,12 +475,22 @@ public:
 	////////////////////////////////////////////////////////////
 	/// \brief Send a key event to this WebInterface
 	/// 
-	/// \param type			Differentiates between keyup and keydown events.
 	/// \param key			The key being pressed/released.
+	/// \param keyUp		Differentiates between keyup and keydown events.
 	/// \param modifiers	Holds the state of SHIFT/CONTROL/ALT etc. for this key press.  If unspecified will default for Shift, Control, and Alt keys only.
 	///
 	////////////////////////////////////////////////////////////
-	void SendKeyEvent(cef_key_event_type_t type, WPARAM key, int modifiers = -1);
+	void SendKeyEvent(WPARAM key, bool keyUp, bool isSystem = false, int modifiers = -1);
+
+	////////////////////////////////////////////////////////////
+	/// \brief Send a key event to this WebInterface
+	/// 
+	/// \param key			The key being pressed/released.
+	/// \param keyUp		Differentiates between keyup and keydown events.
+	/// \param modifiers	Holds the state of SHIFT/CONTROL/ALT etc. for this key press.  If unspecified will default for Shift, Control, and Alt keys only.
+	///
+	////////////////////////////////////////////////////////////
+	void SendKeyEvent(char key, int modifiers = -1);
 
 
 	////////////////////////////////////////////////////////////
@@ -546,7 +564,7 @@ public:
 	/// \param transparent		Background transparency.
 	///
 	////////////////////////////////////////////////////////////
-	WebInterface(int width, int height, const std::string& url, bool transparent);
+	WebInterface(int width, int height, const std::string& url, bool transparent, sf::WindowHandle handle);
 	virtual ~WebInterface();
 
 	////////////////////////////////////////////////////////////
@@ -670,6 +688,12 @@ private:
 	///
 	////////////////////////////////////////////////////////////
 	void ClearBrowser() { mBrowser = NULL; }
+
+	////////////////////////////////////////////////////////////
+	/// \brief Handle of the window that this is drawn in.
+	///
+	////////////////////////////////////////////////////////////
+	sf::WindowHandle mHandle;
 
 	////////////////////////////////////////////////////////////
 	/// \brief The texture used for displaying this WebInterface.

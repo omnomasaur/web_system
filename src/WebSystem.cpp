@@ -180,8 +180,10 @@ void WebSystem::AddBrowserToInterface(WebInterface* pWeb)
 	AutoLock lock_scope(this);
 	CefWindowInfo info;
 	info.SetTransparentPainting(pWeb->IsTransparent());
-	info.SetAsOffScreen(NULL); //We're drawing offscreen so pass NULL as the window handler.  
+	info.SetAsOffScreen(pWeb->mHandle); //We're drawing offscreen so pass NULL as the window handler.  
 	CefBrowserSettings browserSettings;
+	//browserSettings.javascript_access_clipboard = STATE_ENABLED;
+
 
 	CefRefPtr<CefBrowser> browser = CefBrowserHost::CreateBrowserSync(info, this, pWeb->GetCurrentURL(), browserSettings);
 
@@ -251,9 +253,9 @@ void WebSystem::RegisterScheme(std::string name, std::string domain, CefRefPtr<C
 }
 
 ////////////////////////////////////////////////////////////
-WebInterface* WebSystem::CreateWebInterfaceSync(int width, int height, const std::string& url, bool transparent)
+WebInterface* WebSystem::CreateWebInterfaceSync(int width, int height, const std::string& url, bool transparent, sf::WindowHandle handle)
 {
-	WebInterface* pWeb = new WebInterface(width, height, url, transparent);
+	WebInterface* pWeb = new WebInterface(width, height, url, transparent, handle);
 
 	sMakeWebInterfaceQueue.push(pWeb);
 
@@ -555,13 +557,36 @@ void WebSystem::OnPaint(CefRefPtr<CefBrowser> browser, PaintElementType type, co
 	}
 }
 
+////////////////////////////////////////////////////////////
+bool WebSystem::OnKeyEvent(CefRefPtr<CefBrowser> browser, const CefKeyEvent& e, CefEventHandle os_event)
+{
+	if (e.is_system_key && e.modifiers == 4)
+	{
+		if (e.character == 'V')
+			browser->GetFocusedFrame()->Paste();
+		else if (e.character == 'X')
+			browser->GetFocusedFrame()->Cut();
+		else if (e.character == 'C')
+			browser->GetFocusedFrame()->Copy();
+		else if (e.character == 'Z')
+			browser->GetFocusedFrame()->Undo();
+		else if (e.character == 'Y')
+			browser->GetFocusedFrame()->Redo();
+		else if (e.character == 'A')
+			browser->GetFocusedFrame()->SelectAll();
+	}
+
+	return true;
+}
+
 //--------------------------------------------------------------------------------------------------------------------------
 //Web Interface Methods
 //--------------------------------------------------------------------------------------------------------------------------
 
 ////////////////////////////////////////////////////////////
-WebInterface::WebInterface(int width, int height, const std::string& url, bool transparent)
-:mTextureWidth(width)
+WebInterface::WebInterface(int width, int height, const std::string& url, bool transparent, sf::WindowHandle handle)
+: mHandle(handle)
+, mTextureWidth(width)
 , mTextureHeight(height)
 , mCurrentURL(url)
 , mTransparent(transparent)
@@ -657,15 +682,18 @@ int WebInterface::GetMouseModifiers()
 int WebInterface::GetKeyboardModifiers()
 {
 	int mod = 0;
-	if (sf::Keyboard::isKeyPressed(sf::Keyboard::LControl) ||
-		sf::Keyboard::isKeyPressed(sf::Keyboard::RControl))
-		mod |= EVENTFLAG_CONTROL_DOWN;
-	if (sf::Keyboard::isKeyPressed(sf::Keyboard::LShift) ||
-		sf::Keyboard::isKeyPressed(sf::Keyboard::RShift))
-		mod |= EVENTFLAG_SHIFT_DOWN;
-	if (sf::Keyboard::isKeyPressed(sf::Keyboard::LAlt) ||
-		sf::Keyboard::isKeyPressed(sf::Keyboard::RAlt))
-		mod |= EVENTFLAG_ALT_DOWN;
+	if (sf::Keyboard::isKeyPressed(sf::Keyboard::LControl))
+		mod |= EVENTFLAG_CONTROL_DOWN;// mod |= EVENTFLAG_IS_LEFT;
+	if (sf::Keyboard::isKeyPressed(sf::Keyboard::RControl))
+		mod |= EVENTFLAG_CONTROL_DOWN;// mod |= EVENTFLAG_IS_RIGHT;
+	if (sf::Keyboard::isKeyPressed(sf::Keyboard::LShift))
+		mod |= EVENTFLAG_SHIFT_DOWN;// mod |= EVENTFLAG_IS_LEFT;
+	if (sf::Keyboard::isKeyPressed(sf::Keyboard::RShift))
+		mod |= EVENTFLAG_SHIFT_DOWN;// mod |= EVENTFLAG_IS_RIGHT;
+	if (sf::Keyboard::isKeyPressed(sf::Keyboard::LAlt))
+		mod |= EVENTFLAG_ALT_DOWN;// mod |= EVENTFLAG_IS_LEFT;
+	if (sf::Keyboard::isKeyPressed(sf::Keyboard::RAlt))
+		mod |= EVENTFLAG_ALT_DOWN;// mod |= EVENTFLAG_IS_RIGHT;
 
 	return mod;
 }
@@ -705,11 +733,23 @@ void WebInterface::SendMouseWheelEvent(int x, int y, int deltaX, int deltaY)
 }
 
 ////////////////////////////////////////////////////////////
-void WebInterface::SendKeyEvent(cef_key_event_type_t type, WPARAM key, int modifiers)
+void WebInterface::SendKeyEvent(WPARAM key, bool keyUp, bool isSystem, int modifiers)
 {
 	if (!mBrowser)
 		return;
-	CefKeyEvent e; e.type = type; e.windows_key_code = key; e.modifiers = modifiers == -1 ? GetKeyboardModifiers() : modifiers;
+	CefKeyEvent e; e.windows_key_code = key; e.modifiers = modifiers == -1 ? GetKeyboardModifiers() : modifiers;
+	e.type = keyUp ? KEYEVENT_KEYUP : KEYEVENT_KEYDOWN;
+	e.is_system_key = isSystem; e.character = key; e.unmodified_character = key; //e.native_key_code = 0;
+	mBrowser->GetHost()->SendKeyEvent(e);
+}
+
+////////////////////////////////////////////////////////////
+void WebInterface::SendKeyEvent(char key, int modifiers)
+{
+	if (!mBrowser)
+		return;
+	CefKeyEvent e; e.windows_key_code = key; e.modifiers = modifiers == -1 ? GetKeyboardModifiers() : modifiers;
+	e.type = KEYEVENT_CHAR; e.character = key; e.unmodified_character = key;
 	mBrowser->GetHost()->SendKeyEvent(e);
 }
 
