@@ -10,7 +10,7 @@
 // Static variables
 ////////////////////////////////////////////////////////////
 std::string WebSystem::sSubprocess = "";
-bool WebSystem::sSingleProcess = false;
+bool WebSystem::sSingleProcess = true;
 CefMainArgs WebSystem::sArgs;
 CefRefPtr<WebApp> WebSystem::sApp = NULL;
 CefRefPtr<WebSystem> WebSystem::sInstance = NULL;
@@ -20,6 +20,7 @@ std::queue<WebSystem::RegScheme> WebSystem::sRegSchemeQueue;
 std::queue<WebInterface*> WebSystem::sMakeWebInterfaceQueue;
 std::map<int, WebInterface*> WebSystem::sWebInterfaces;
 WebSystem::BindingMap WebSystem::sBindings;
+WebSystem::ModifierKeyFlags WebSystem::sModifierKeyFlags;
 
 ////////////////////////////////////////////////////////////
 //These functions are taken / some slightly modified from cefclient2010 example code.  
@@ -128,8 +129,7 @@ CefRefPtr<WebSystem> WebSystem::GetInstance()
 }
 
 ////////////////////////////////////////////////////////////
-//This method is what runs our thread.
-void WebSystem::WebThread()
+void WebSystem::WebStartup()
 {
 	if (!sApp)
 	{
@@ -151,27 +151,48 @@ void WebSystem::WebThread()
 	}
 
 	CefInitialize(sArgs, settings, sApp.get());
+}
+
+////////////////////////////////////////////////////////////
+//This method is what runs our thread.
+void WebSystem::WebThread()
+{
+	return;
+
+	WebStartup();
 
 	while (!sEndThread)
 	{
-		CefDoMessageLoopWork();
-
-		while (sRegSchemeQueue.size() > 0)
-		{
-			CefRegisterSchemeHandlerFactory(sRegSchemeQueue.front().mName, sRegSchemeQueue.front().mDomain, sRegSchemeQueue.front().mFactory);
-			sRegSchemeQueue.pop();
-		}
-
-		while (sMakeWebInterfaceQueue.size() > 0)
-		{
-			GetInstance()->AddBrowserToInterface(sMakeWebInterfaceQueue.front());
-			sMakeWebInterfaceQueue.pop();
-		}
+		DoWebLoopWork();
 	}
 
+	WebShutdown();
+}
+
+////////////////////////////////////////////////////////////
+void WebSystem::WebShutdown()
+{
 	//WE SHOULD PROBABLY CHECK IF THERE ARE STILL LIVE BROWSERS HERE
 
 	CefShutdown();
+}
+
+////////////////////////////////////////////////////////////
+void WebSystem::DoWebLoopWork()
+{
+	while (sRegSchemeQueue.size() > 0)
+	{
+		CefRegisterSchemeHandlerFactory(sRegSchemeQueue.front().mName, sRegSchemeQueue.front().mDomain, sRegSchemeQueue.front().mFactory);
+		sRegSchemeQueue.pop();
+	}
+
+	while (sMakeWebInterfaceQueue.size() > 0)
+	{
+		GetInstance()->AddBrowserToInterface(sMakeWebInterfaceQueue.front());
+		sMakeWebInterfaceQueue.pop();
+	}
+
+	CefDoMessageLoopWork();
 }
 
 ////////////////////////////////////////////////////////////
@@ -180,7 +201,7 @@ void WebSystem::AddBrowserToInterface(WebInterface* pWeb)
 	AutoLock lock_scope(this);
 	CefWindowInfo info;
 	info.SetTransparentPainting(pWeb->IsTransparent());
-	info.SetAsOffScreen(pWeb->mHandle); //We're drawing offscreen so pass NULL as the window handler.  
+	info.SetAsOffScreen(NULL);// pWeb->mHandle); //We're drawing offscreen so pass NULL as the window handler.  
 	CefBrowserSettings browserSettings;
 	//browserSettings.javascript_access_clipboard = STATE_ENABLED;
 
@@ -219,6 +240,7 @@ int WebSystem::Main()
 ////////////////////////////////////////////////////////////
 void WebSystem::StartWeb()
 {
+	return;
 	if (!spThread)
 	{
 		spThread = new sf::Thread(&WebThread);
@@ -231,12 +253,14 @@ void WebSystem::StartWeb()
 ////////////////////////////////////////////////////////////
 void WebSystem::EndWeb()
 {
+	return;
 	sEndThread = true;
 }
 
 ////////////////////////////////////////////////////////////
 void WebSystem::WaitForWebEnd()
 {
+	return;
 	if (spThread)
 	{
 		spThread->wait();
@@ -253,17 +277,18 @@ void WebSystem::RegisterScheme(std::string name, std::string domain, CefRefPtr<C
 }
 
 ////////////////////////////////////////////////////////////
-WebInterface* WebSystem::CreateWebInterfaceSync(int width, int height, const std::string& url, bool transparent, sf::WindowHandle handle)
+WebInterface* WebSystem::CreateWebInterfaceSync(int width, int height, const std::string& url, bool transparent)//, sf::WindowHandle handle)
 {
-	WebInterface* pWeb = new WebInterface(width, height, url, transparent, handle);
+	WebInterface* pWeb = new WebInterface(width, height, url, transparent);//, handle);
 
 	sMakeWebInterfaceQueue.push(pWeb);
 
 	while (!pWeb->mBrowser)
 	{
+		WebSystem::DoWebLoopWork();
 		//Sleep for one millisecond to prevent 100% CPU usage.
 		//There is probably a more elegant solution for this.
-		Sleep(1); 
+		Sleep(1);
 	}
 
 	return pWeb;
@@ -368,7 +393,7 @@ bool WebSystem::OnProcessMessageReceived(CefRefPtr<CefBrowser> browser, CefProce
 			std::string name = message->GetArgumentList()->GetString(0);
 
 			sBindings.insert(std::make_pair(
-				std::make_pair(name, message->GetArgumentList()->GetInt(1)), 
+				std::make_pair(name, message->GetArgumentList()->GetInt(1)),
 				(JsBinding::JsCallback)NULL));
 
 			browser->Reload();
@@ -399,24 +424,24 @@ bool WebSystem::OnProcessMessageReceived(CefRefPtr<CefBrowser> browser, CefProce
 					CefValueType type = margs->GetType(i + 2);
 					switch (type) {
 					case VTYPE_LIST: {
-						CefRefPtr<CefListValue> list = margs->GetList(i + 2);
-						arguments->SetList(i, list);
+										 CefRefPtr<CefListValue> list = margs->GetList(i + 2);
+										 arguments->SetList(i, list);
 					} break;
 					case VTYPE_BOOL: {
-						bool b = margs->GetBool(i + 2);
-						arguments->SetBool(i, b);
+										 bool b = margs->GetBool(i + 2);
+										 arguments->SetBool(i, b);
 					} break;
 					case VTYPE_DOUBLE: {
-						double d = margs->GetDouble(i + 2);
-						arguments->SetDouble(i, d);
+										   double d = margs->GetDouble(i + 2);
+										   arguments->SetDouble(i, d);
 					} break;
 					case VTYPE_INT: {
-						int integer = margs->GetInt(i + 2);
-						arguments->SetInt(i, integer);
+										int integer = margs->GetInt(i + 2);
+										arguments->SetInt(i, integer);
 					} break;
 					case VTYPE_STRING: {
-						std::string s = margs->GetString(i + 2);
-						arguments->SetString(i, s);
+										   std::string s = margs->GetString(i + 2);
+										   arguments->SetString(i, s);
 					} break;
 					default:
 						break;
@@ -442,7 +467,10 @@ void WebSystem::OnLoadStart(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> f
 ////////////////////////////////////////////////////////////
 void WebSystem::OnLoadEnd(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, int httpStatusCode)
 {
-
+	if (sWebInterfaces.count(browser->GetIdentifier()))
+	{
+		sWebInterfaces[browser->GetIdentifier()]->ProcessDeferredJSCalls();
+	}
 }
 
 ////////////////////////////////////////////////////////////
@@ -485,11 +513,14 @@ void WebSystem::OnPaint(CefRefPtr<CefBrowser> browser, PaintElementType type, co
 {
 	////Get the web interface we will be working with. 
 	if (!sWebInterfaces.count(browser->GetIdentifier())) return;
+	if (!buffer)
+		return;
 	WebInterface* pWeb = sWebInterfaces[browser->GetIdentifier()];
 	if (!pWeb)
 		return;
-
-	if (!buffer)
+	sf::Lock lock(pWeb->mMutex);
+	pWeb = sWebInterfaces[browser->GetIdentifier()];
+	if (!pWeb)
 		return;
 
 	if (type == PET_VIEW)
@@ -512,8 +543,6 @@ void WebSystem::OnPaint(CefRefPtr<CefBrowser> browser, PaintElementType type, co
 		{
 			//We want to work on the buffer byte by byte so get a pointer with a new type.
 			char* bitmap = (char*)(buffer);
-
-			sf::Lock lock(pWeb->mMutex);
 			//Update the dirty rectangles.
 			CefRenderHandler::RectList::const_iterator i = dirtyRects.begin();
 			for (; i != dirtyRects.end(); ++i)
@@ -546,7 +575,9 @@ void WebSystem::OnPaint(CefRefPtr<CefBrowser> browser, PaintElementType type, co
 				//This can be interrupted if the main thread calls a draw on a sprite which uses this texture
 				// as the texture is bound by openGL calls.  
 				//To rectify this we have the redundancy updating system.  
-				pWeb->mpTexture->update((sf::Uint8*)rectBuffer, rect.width, rect.height, rect.x, rect.y);
+				//This has been changed and the redundancy updating is now the only updating.  
+				//This is in an attempt to prevent thread blocking.  
+				//pWeb->mpTexture->update((sf::Uint8*)rectBuffer, rect.width, rect.height, rect.x, rect.y);
 
 				//Here we need to add the data required for the update to the queue for redundancy updates.  
 				pWeb->mUpdateRects.push(WebInterface::UpdateRect());
@@ -584,10 +615,10 @@ bool WebSystem::OnKeyEvent(CefRefPtr<CefBrowser> browser, const CefKeyEvent& e, 
 //--------------------------------------------------------------------------------------------------------------------------
 
 ////////////////////////////////////////////////////////////
-WebInterface::WebInterface(int width, int height, const std::string& url, bool transparent, sf::WindowHandle handle)
-: mHandle(handle)
-, mTextureWidth(width)
+WebInterface::WebInterface(int width, int height, const std::string& url, bool transparent)//, sf::WindowHandle handle)
+: mTextureWidth(width)
 , mTextureHeight(height)
+//, mHandle(handle)
 , mCurrentURL(url)
 , mTransparent(transparent)
 , mBrowser(NULL)
@@ -603,6 +634,7 @@ WebInterface::WebInterface(int width, int height, const std::string& url, bool t
 ////////////////////////////////////////////////////////////
 WebInterface::~WebInterface()
 {
+	sf::Lock lock(mMutex);
 
 	delete mpTexture;
 
@@ -632,6 +664,8 @@ WebInterface::~WebInterface()
 ////////////////////////////////////////////////////////////
 void WebInterface::UpdateTexture()
 {
+	if (mUpdateRects.size() <= 0)
+		return;
 	sf::Lock lock(mMutex);
 	while (mUpdateRects.size() > 0)
 	{
@@ -650,30 +684,62 @@ void WebInterface::SendFocusEvent(bool setFocus)
 }
 
 ////////////////////////////////////////////////////////////
+void WebInterface::CheckModifierKey(WPARAM key, bool keyUp)
+{
+	if (key == VK_LCONTROL || key == VK_RCONTROL || key == VK_CONTROL)
+		WebSystem::sModifierKeyFlags.control = !keyUp;
+	else if (key == VK_LSHIFT || key == VK_RSHIFT || key == VK_SHIFT)
+		WebSystem::sModifierKeyFlags.shift = !keyUp;
+	else if (key == VK_LMENU || key == VK_RMENU || key == VK_MENU)
+		WebSystem::sModifierKeyFlags.alt = !keyUp;
+	else if (key == VK_LBUTTON)
+		WebSystem::sModifierKeyFlags.mouse_left = !keyUp;
+	else if (key == VK_MBUTTON)
+		WebSystem::sModifierKeyFlags.mouse_mid = !keyUp;
+	else if (key == VK_RBUTTON)
+		WebSystem::sModifierKeyFlags.mouse_right = !keyUp;
+}
+
+////////////////////////////////////////////////////////////
 int WebInterface::GetMouseModifiers()
 {
 	int mod = 0;
-	if (sf::Keyboard::isKeyPressed(sf::Keyboard::LControl) ||
-		sf::Keyboard::isKeyPressed(sf::Keyboard::RControl))
-		mod |= EVENTFLAG_CONTROL_DOWN;
-	if (sf::Keyboard::isKeyPressed(sf::Keyboard::LShift) ||
-		sf::Keyboard::isKeyPressed(sf::Keyboard::RShift))
-		mod |= EVENTFLAG_SHIFT_DOWN;
-	if (sf::Keyboard::isKeyPressed(sf::Keyboard::LAlt) ||
-		sf::Keyboard::isKeyPressed(sf::Keyboard::RAlt))
-		mod |= EVENTFLAG_ALT_DOWN;
-	if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
-		mod |= EVENTFLAG_LEFT_MOUSE_BUTTON;
-	if (sf::Mouse::isButtonPressed(sf::Mouse::Middle))
-		mod |= EVENTFLAG_MIDDLE_MOUSE_BUTTON;
-	if (sf::Mouse::isButtonPressed(sf::Mouse::Right))
-		mod |= EVENTFLAG_RIGHT_MOUSE_BUTTON;
+	//if (sf::Keyboard::isKeyPressed(sf::Keyboard::LControl) ||
+	//	sf::Keyboard::isKeyPressed(sf::Keyboard::RControl))
+	//	mod |= EVENTFLAG_CONTROL_DOWN;
+	//if (sf::Keyboard::isKeyPressed(sf::Keyboard::LShift) ||
+	//	sf::Keyboard::isKeyPressed(sf::Keyboard::RShift))
+	//	mod |= EVENTFLAG_SHIFT_DOWN;
+	//if (sf::Keyboard::isKeyPressed(sf::Keyboard::LAlt) ||
+	//	sf::Keyboard::isKeyPressed(sf::Keyboard::RAlt))
+	//	mod |= EVENTFLAG_ALT_DOWN;
+	//if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
+	//	mod |= EVENTFLAG_LEFT_MOUSE_BUTTON;
+	//if (sf::Mouse::isButtonPressed(sf::Mouse::Middle))
+	//	mod |= EVENTFLAG_MIDDLE_MOUSE_BUTTON;
+	//if (sf::Mouse::isButtonPressed(sf::Mouse::Right))
+	//	mod |= EVENTFLAG_RIGHT_MOUSE_BUTTON;
 
 	// Low bit set from GetKeyState indicates "toggled".
 	//if (::GetKeyState(VK_NUMLOCK) & 1)
 	//	mod |= EVENTFLAG_NUM_LOCK_ON;
 	//if (::GetKeyState(VK_CAPITAL) & 1)
 	//	mod |= EVENTFLAG_CAPS_LOCK_ON;
+
+	if (WebSystem::sModifierKeyFlags.control)
+		mod |= EVENTFLAG_CONTROL_DOWN;
+	if (WebSystem::sModifierKeyFlags.shift)
+		mod |= EVENTFLAG_SHIFT_DOWN;
+	if (WebSystem::sModifierKeyFlags.alt)
+		mod |= EVENTFLAG_ALT_DOWN;
+	if (WebSystem::sModifierKeyFlags.mouse_left)
+		mod |= EVENTFLAG_LEFT_MOUSE_BUTTON;
+	if (WebSystem::sModifierKeyFlags.mouse_mid)
+		mod |= EVENTFLAG_MIDDLE_MOUSE_BUTTON;
+	if (WebSystem::sModifierKeyFlags.mouse_right)
+		mod |= EVENTFLAG_RIGHT_MOUSE_BUTTON;
+
+	//Numlock and Capslock are being ignored for now. 
 
 	return mod;
 }
@@ -682,20 +748,44 @@ int WebInterface::GetMouseModifiers()
 int WebInterface::GetKeyboardModifiers()
 {
 	int mod = 0;
-	if (sf::Keyboard::isKeyPressed(sf::Keyboard::LControl))
-		mod |= EVENTFLAG_CONTROL_DOWN;// mod |= EVENTFLAG_IS_LEFT;
-	if (sf::Keyboard::isKeyPressed(sf::Keyboard::RControl))
-		mod |= EVENTFLAG_CONTROL_DOWN;// mod |= EVENTFLAG_IS_RIGHT;
-	if (sf::Keyboard::isKeyPressed(sf::Keyboard::LShift))
-		mod |= EVENTFLAG_SHIFT_DOWN;// mod |= EVENTFLAG_IS_LEFT;
-	if (sf::Keyboard::isKeyPressed(sf::Keyboard::RShift))
-		mod |= EVENTFLAG_SHIFT_DOWN;// mod |= EVENTFLAG_IS_RIGHT;
-	if (sf::Keyboard::isKeyPressed(sf::Keyboard::LAlt))
-		mod |= EVENTFLAG_ALT_DOWN;// mod |= EVENTFLAG_IS_LEFT;
-	if (sf::Keyboard::isKeyPressed(sf::Keyboard::RAlt))
-		mod |= EVENTFLAG_ALT_DOWN;// mod |= EVENTFLAG_IS_RIGHT;
+	//if (sf::Keyboard::isKeyPressed(sf::Keyboard::LControl))
+	//	mod |= EVENTFLAG_CONTROL_DOWN;// mod |= EVENTFLAG_IS_LEFT;
+	//if (sf::Keyboard::isKeyPressed(sf::Keyboard::RControl))
+	//	mod |= EVENTFLAG_CONTROL_DOWN;// mod |= EVENTFLAG_IS_RIGHT;
+	//if (sf::Keyboard::isKeyPressed(sf::Keyboard::LShift))
+	//	mod |= EVENTFLAG_SHIFT_DOWN;// mod |= EVENTFLAG_IS_LEFT;
+	//if (sf::Keyboard::isKeyPressed(sf::Keyboard::RShift))
+	//	mod |= EVENTFLAG_SHIFT_DOWN;// mod |= EVENTFLAG_IS_RIGHT;
+	//if (sf::Keyboard::isKeyPressed(sf::Keyboard::LAlt))
+	//	mod |= EVENTFLAG_ALT_DOWN;// mod |= EVENTFLAG_IS_LEFT;
+	//if (sf::Keyboard::isKeyPressed(sf::Keyboard::RAlt))
+	//	mod |= EVENTFLAG_ALT_DOWN;// mod |= EVENTFLAG_IS_RIGHT;
+
+	if (WebSystem::sModifierKeyFlags.control)
+		mod |= EVENTFLAG_CONTROL_DOWN;
+	if (WebSystem::sModifierKeyFlags.shift)
+		mod |= EVENTFLAG_SHIFT_DOWN;
+	if (WebSystem::sModifierKeyFlags.alt)
+		mod |= EVENTFLAG_ALT_DOWN;
+	if (WebSystem::sModifierKeyFlags.mouse_left)
+		mod |= EVENTFLAG_LEFT_MOUSE_BUTTON;
+	if (WebSystem::sModifierKeyFlags.mouse_mid)
+		mod |= EVENTFLAG_MIDDLE_MOUSE_BUTTON;
+	if (WebSystem::sModifierKeyFlags.mouse_right)
+		mod |= EVENTFLAG_RIGHT_MOUSE_BUTTON;
 
 	return mod;
+}
+
+////////////////////////////////////////////////////////////
+void WebInterface::ProcessDeferredJSCalls()
+{
+	while (mJSCalls.size() > 0)
+	{
+		JSCall call = mJSCalls.front();
+		ExecuteJS(call.code);
+		mJSCalls.pop();
+	}
 }
 
 ////////////////////////////////////////////////////////////
@@ -704,7 +794,14 @@ void WebInterface::SendMouseClickEvent(int x, int y, sf::Mouse::Button button, b
 	if (!mBrowser)
 		return;
 
-	CefBrowserHost::MouseButtonType type = button == sf::Mouse::Left ? MBT_LEFT : 
+	if (button == sf::Mouse::Left)
+		WebSystem::sModifierKeyFlags.mouse_left = !mouseUp;
+	else if (button == sf::Mouse::Middle)
+		WebSystem::sModifierKeyFlags.mouse_mid = !mouseUp;
+	else if (button == sf::Mouse::Right)
+		WebSystem::sModifierKeyFlags.mouse_right = !mouseUp;
+
+	CefBrowserHost::MouseButtonType type = button == sf::Mouse::Left ? MBT_LEFT :
 		button == sf::Mouse::Right ? MBT_RIGHT : MBT_MIDDLE;
 
 	CefMouseEvent e; e.x = x; e.y = y; e.modifiers = GetMouseModifiers();
@@ -737,6 +834,7 @@ void WebInterface::SendKeyEvent(WPARAM key, bool keyUp, bool isSystem, int modif
 {
 	if (!mBrowser)
 		return;
+	CheckModifierKey(key, keyUp);
 	CefKeyEvent e; e.windows_key_code = key; e.modifiers = modifiers == -1 ? GetKeyboardModifiers() : modifiers;
 	e.type = keyUp ? KEYEVENT_KEYUP : KEYEVENT_KEYDOWN;
 	e.is_system_key = isSystem; e.character = key; e.unmodified_character = key; //e.native_key_code = 0;
@@ -790,7 +888,10 @@ void WebInterface::AddJSBindings(const std::vector<JsBinding> bindings)
 void WebInterface::ExecuteJS(const CefString& code)
 {
 	if (!mBrowser)
+	{
+		mJSCalls.push(JSCall(code));
 		return;
+	}
 
 	ExecuteJS(code, mBrowser->GetMainFrame());
 }
@@ -799,8 +900,10 @@ void WebInterface::ExecuteJS(const CefString& code)
 void WebInterface::ExecuteJS(const CefString& code, CefRefPtr<CefFrame> frame)
 {
 	if (!mBrowser)
+	{
+		mJSCalls.push(JSCall(code));
 		return;
-
+	}
 	//Should probably check to make sure the frame is from our browser here.
 
 	ExecuteJS(code, frame, 0);
@@ -810,7 +913,13 @@ void WebInterface::ExecuteJS(const CefString& code, CefRefPtr<CefFrame> frame)
 void WebInterface::ExecuteJS(const CefString& code, CefRefPtr<CefFrame> frame, int startLine)
 {
 	if (!mBrowser)
+	{
+		mJSCalls.push(JSCall(code));
 		return;
+	}
+
+	if (mBrowser->IsLoading())
+		mJSCalls.push(JSCall(code));
 
 	//Should probably check to make sure the frame is from our browser here.
 
@@ -827,7 +936,7 @@ bool WebInterface::JSCallback(const CefString& name,
 
 	if (WebSystem::sBindings.count(std::make_pair(name, mBrowser->GetIdentifier())))
 	{
-		result = WebSystem::sBindings[std::make_pair(name, mBrowser->GetIdentifier())](arguments);
+		result = WebSystem::sBindings[std::make_pair(name, mBrowser->GetIdentifier())](this, arguments);
 	}
 
 	//Otherwise fallthrough and return false.
@@ -877,9 +986,9 @@ bool WebV8Handler::Execute(const CefString& name,
 	message->GetArgumentList()->SetInt(1, arguments.size());
 	for (unsigned int i = 0; i < arguments.size(); i++)
 	{
-		SetListValue(message->GetArgumentList(), i+2, arguments[i]);
+		SetListValue(message->GetArgumentList(), i + 2, arguments[i]);
 	}
-	
+
 	browser->SendProcessMessage(PID_BROWSER, message);
 
 	return false;

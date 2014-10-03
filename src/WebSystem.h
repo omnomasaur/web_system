@@ -33,6 +33,10 @@
 // Web System Definitions
 ////////////////////////////////////////////////////////////
 
+//Forward declarations.
+class WebApp;
+class WebInterface;
+
 ////////////////////////////////////////////////////////////
 /// \brief Data for a javascript binding.
 ///
@@ -45,6 +49,7 @@ public:
 	///
 	////////////////////////////////////////////////////////////
 	typedef bool(*JsCallback) (
+		WebInterface* pWeb,
 		CefRefPtr<CefListValue> arguments
 		);
 
@@ -72,10 +77,6 @@ public:
 	////////////////////////////////////////////////////////////
 	JsCallback mfpJSCallback;
 };
-
-//Forward declarations.
-class WebApp;
-class WebInterface;
 
 class WebSystem : public CefBrowserProcessHandler,
 	public CefRenderProcessHandler,
@@ -144,6 +145,24 @@ public:
 	static void EndWeb();
 
 	////////////////////////////////////////////////////////////
+	/// \brief Function that does web startup work
+	///
+	////////////////////////////////////////////////////////////
+	static void WebStartup();
+
+	////////////////////////////////////////////////////////////
+	/// \brief Function that does thread loop work
+	///
+	////////////////////////////////////////////////////////////
+	static void DoWebLoopWork();
+
+	////////////////////////////////////////////////////////////
+	/// \brief Function that shuts down the web system.  
+	///
+	////////////////////////////////////////////////////////////
+	static void WebShutdown();
+
+	////////////////////////////////////////////////////////////
 	/// \brief Blocks until WebSystem has closed.
 	///
 	/// Should only be called after EndWeb()
@@ -170,7 +189,7 @@ public:
 	/// \param transparent	True to use a transparent background
 	///
 	////////////////////////////////////////////////////////////
-	static WebInterface* CreateWebInterfaceSync(int width, int height, const std::string& url, bool transparent, sf::WindowHandle handle);
+	static WebInterface* CreateWebInterfaceSync(int width, int height, const std::string& url, bool transparent);// , sf::WindowHandle handle);
 
 	////////////////////////////////////////////////////////////
 	/// \brief Redundantly updates the textures of all WebInterfaces
@@ -361,14 +380,29 @@ private:
 	///
 	////////////////////////////////////////////////////////////
 	typedef std::map<std::pair<std::string, int>,
-		 JsBinding::JsCallback >
-		 BindingMap;
+		JsBinding::JsCallback >
+		BindingMap;
 
 	////////////////////////////////////////////////////////////
 	/// \brief Map containing all javascript bindings.  
 	///
 	////////////////////////////////////////////////////////////
 	static BindingMap sBindings;
+
+	////////////////////////////////////////////////////////////
+	/// \brief Struct for tracking modifier bits.
+	///
+	////////////////////////////////////////////////////////////
+	struct ModifierKeyFlags
+	{
+		unsigned control : 1, shift : 1, alt : 1, mouse_left : 1, mouse_mid : 1, mouse_right : 1, numlock : 1, capslock : 1;
+	};
+
+	////////////////////////////////////////////////////////////
+	/// \brief Flags for tracking modifier bits.
+	///
+	////////////////////////////////////////////////////////////
+	static ModifierKeyFlags sModifierKeyFlags;
 
 	////////////////////////////////////////////////////////////
 	/// \brief Creates a browser and adds it to a WebInterface
@@ -416,6 +450,7 @@ public:
 	////////////////////////////////////////////////////////////
 	IMPLEMENT_REFCOUNTING(WebApp);
 };
+
 
 ////////////////////////////////////////////////////////////
 /// \breif Interface for the program to interact with WebSystem.  
@@ -492,7 +527,6 @@ public:
 	////////////////////////////////////////////////////////////
 	void SendKeyEvent(char key, int modifiers = -1);
 
-
 	////////////////////////////////////////////////////////////
 	/// \brief Adds a javascript binding to this WebInterface
 	///
@@ -564,7 +598,7 @@ public:
 	/// \param transparent		Background transparency.
 	///
 	////////////////////////////////////////////////////////////
-	WebInterface(int width, int height, const std::string& url, bool transparent, sf::WindowHandle handle);
+	WebInterface(int width, int height, const std::string& url, bool transparent);// , sf::WindowHandle handle);
 	virtual ~WebInterface();
 
 	////////////////////////////////////////////////////////////
@@ -646,6 +680,16 @@ public:
 	void SetSize(int width, int height);
 
 private:
+
+	////////////////////////////////////////////////////////////
+	/// \brief Checks if key is a modifier and tracks it if so.
+	///
+	/// \param key		Key to be checked/tracked.
+	/// \param keyUp	Is this a press or release event.
+	/// 
+	////////////////////////////////////////////////////////////
+	void CheckModifierKey(WPARAM key, bool keyUp);
+
 	////////////////////////////////////////////////////////////
 	/// \brief Returns the defaultly handled modifiers for mouse keys.
 	///
@@ -663,6 +707,30 @@ private:
 	///
 	////////////////////////////////////////////////////////////
 	static int GetKeyboardModifiers();
+
+	////////////////////////////////////////////////////////////
+	/// \brief Processes javascript calls that were made before the browser was ready.  
+	///
+	////////////////////////////////////////////////////////////
+	void ProcessDeferredJSCalls();
+
+	////////////////////////////////////////////////////////////
+	/// \brief Holds data for a javascript call.
+	///
+	////////////////////////////////////////////////////////////
+	struct JSCall
+	{
+		JSCall(){}
+		JSCall(CefString c)
+			:code(c){}
+		CefString code;
+	};
+
+	////////////////////////////////////////////////////////////
+	/// \brief Queue of javascript calls to be made when the browser is available.
+	///
+	////////////////////////////////////////////////////////////
+	std::queue<JSCall> mJSCalls;
 
 	////////////////////////////////////////////////////////////
 	/// \brief Holds data for redundantly updating rectangles on the texture. 

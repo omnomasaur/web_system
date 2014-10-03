@@ -15,8 +15,12 @@ WPARAM sfkeyToWparam(sf::Keyboard::Key key)
 {
 	switch (key)
 	{
-	case sf::Keyboard::LControl:		return VK_CONTROL;
-	case sf::Keyboard::RControl:		return VK_CONTROL;
+	case sf::Keyboard::LControl:		return VK_LCONTROL;
+	case sf::Keyboard::RControl:		return VK_RCONTROL;
+	case sf::Keyboard::LShift:		return VK_LSHIFT;
+	case sf::Keyboard::RShift:		return VK_RSHIFT;
+	case sf::Keyboard::LAlt:		return VK_LMENU;
+	case sf::Keyboard::RAlt:		return VK_RMENU;
 	case sf::Keyboard::LSystem:		return VK_LWIN;
 	case sf::Keyboard::RSystem:		return VK_RWIN;
 	case sf::Keyboard::Menu:		return VK_APPS;
@@ -145,6 +149,7 @@ char* getCmdOption(char** begin, char** end, const std::string & option)
 // Each JS binding gets it's own callback function which must return a bool
 //  and take these parameters.  
 bool jsCallback(
+	WebInterface* pWeb,
 	CefRefPtr<CefListValue> arguments
 	)
 {
@@ -187,7 +192,8 @@ int main(int argc, char* argv[])
 	// removing browsers once it's multi threading is started.  
 	//CEF3 now supports offscreen rendering so technically this could be rewritten
 	//to not use it's own thread, but if it aint broke don't fix it.
-	WebSystem::StartWeb();
+	//WebSystem::StartWeb();
+	WebSystem::WebStartup();
 
 	//Register our custom scheme for loading local files.  
 	//"local" specifies local:// as the scheme.
@@ -207,11 +213,10 @@ int main(int argc, char* argv[])
 		pWeb = WebSystem::CreateWebInterfaceSync(
 			(int)(window.getSize().x / (float)cols)
 			, (int)(window.getSize().y / (float)rows)
-			//,"local://../res/index.htm"
+			,"local://../res/index.htm"
 			//,"http://www.randomwebsite.com/cgi-bin/random.pl"
-			, "http://www.google.com"
-			, true
-			, window.getSystemHandle());
+			//, "http://www.google.com"
+			, true);
 
 		//Add the binding for "testCallback" to our web interface.  
 		//Specifies jsCallback as the function to be called for the binding.  
@@ -399,8 +404,7 @@ int main(int argc, char* argv[])
 						webInterfaces.push_back(WebSystem::CreateWebInterfaceSync(1280, 720,
 							//"local://../res/index.htm"
 							"http://www.google.com"
-							, true
-							, window.getSystemHandle()));
+							, true));
 						webInterfaces.back()->AddJSBinding("testCallback", &jsCallback);
 						//sprites.back().setTexture(*webInterfaces.front()->GetTexture());
 						//sprites.back().setOrigin(sprites.front().getTexture()->getSize().x / 2.0f, sprites.front().getTexture()->getSize().y / 2.0f);
@@ -417,6 +421,8 @@ int main(int argc, char* argv[])
 			}
         }
 
+		WebSystem::DoWebLoopWork();
+
 		WebSystem::UpdateInterfaceTextures();
 
 		//DRAW ZONE
@@ -429,8 +435,9 @@ int main(int argc, char* argv[])
 		window.display();
     }
 
-	WebSystem::EndWeb();
-	WebSystem::WaitForWebEnd();
+	WebSystem::WebShutdown();
+	//WebSystem::EndWeb();
+	//WebSystem::WaitForWebEnd();
 
 	return EXIT_SUCCESS;
 }
